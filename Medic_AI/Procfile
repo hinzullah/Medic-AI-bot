@@ -1,0 +1,1 @@
+web: cd medical_chatbot_project && python app.py
