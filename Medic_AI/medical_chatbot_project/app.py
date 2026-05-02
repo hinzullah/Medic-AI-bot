@@ -1,154 +1,91 @@
 """
-Main Gradio Web App - Production-ready medical chatbot
-FIXED for Gradio 6.0 and Railway Deployment
+Medical Chatbot App - Clean Version
 """
 
-import gradio as gr
-from src.rag_chatbot import RAGMedicalChatbot
-from src.safety_layer import SafeChatbotWrapper
-from datetime import datetime
+import sys
 import os
+import logging
 from dotenv import load_dotenv
+import gradio as gr
 
-# Load environment variables
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+logger.info("="*60)
+logger.info("🏥 Starting Medical Chatbot")
+logger.info("="*60)
+
+# Load environment
 load_dotenv()
+logger.info("✅ Environment variables loaded")
 
+# Get PORT
+port = int(os.environ.get('PORT', 7860))
+logger.info(f"PORT: {port}")
 
-class MedicalChatbotApp:
-    def __init__(self):
-        """Initialize the web app"""
-        try:
-            # Try to load RAG chatbot
-            base_bot = RAGMedicalChatbot()
-            self.bot = SafeChatbotWrapper(base_bot)
-            self.has_rag = True
-            print("✅ RAG chatbot loaded")
-        except Exception as e:
-            print(f"⚠️ Could not load RAG chatbot: {e}")
-            print("Falling back to simple chatbot...")
-            
-            from src.simple_chatbot import SimpleMedicalChatbot
-            base_bot = SimpleMedicalChatbot()
-            self.bot = SafeChatbotWrapper(base_bot)
-            self.has_rag = False
-        
-        self.conversation_log = []
-    
-    def respond(self, message, history):
-        """Generate response for Gradio"""
-        
-        # Log conversation
-        self.conversation_log.append({
-            "timestamp": datetime.now().isoformat(),
-            "user": message,
-            "response": None
-        })
-        
-        # Get response
-        response = self.bot.chat(message)
-        
-        # Update log
-        self.conversation_log[-1]["response"] = response
-        
-        return response
-    
-    def reset_conversation(self):
-        """Reset the chat"""
-        self.bot.reset()
-        self.conversation_log = []
-        return None
+groq_key = os.environ.get('GROQ_API_KEY')
+logger.info(f"GROQ_API_KEY found: {bool(groq_key)}")
 
+# Load chatbot
+logger.info("Loading chatbot...")
+bot = None
 
-def create_interface():
-    """Create Gradio interface"""
-    
-    app = MedicalChatbotApp()
-    
-    # Custom CSS
-    css = """
-    .message {
-        font-size: 16px;
-        padding: 10px;
-    }
-    """
-    
-    # Header HTML
-    header = """
-    <div style='text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; margin-bottom: 20px;'>
-        <h1 style='margin: 0; font-size: 2.5em;'>🏥 Dr. AI</h1>
-        <p style='margin: 10px 0 0 0; font-size: 1.2em;'>Your 24/7 Medical Information Assistant</p>
-    </div>
+try:
+    from src.rag_chatbot import RAGMedicalChatbot
+    from src.safety_layer import SafeChatbotWrapper
+    logger.info("Initializing RAG Chatbot...")
+    base_bot = RAGMedicalChatbot()
+    bot = SafeChatbotWrapper(base_bot)
+    logger.info("✅ RAG Chatbot loaded")
+except Exception as e:
+    logger.error(f"RAG Chatbot failed: {e}")
+    try:
+        from src.simple_chatbot import SimpleMedicalChatbot
+        base_bot = SimpleMedicalChatbot()
+        bot = SafeChatbotWrapper(base_bot)
+        logger.info("✅ Simple Chatbot loaded")
+    except Exception as e2:
+        logger.error(f"Simple Chatbot failed: {e2}")
 
-    <div style='padding: 20px; background-color: #000000; border-left: 5px solid #ffc107; border-radius: 8px; margin-bottom: 20px;'>
-        <h3 style='margin-top: 0; color: #856404;'>⚠️ Important Medical Disclaimer</h3>
-        <ul style='margin: 10px 0; color: #856404;'>
-            <li><strong>This AI provides general health information only</strong></li>
-            <li><strong>NOT a substitute for professional medical advice, diagnosis, or treatment</strong></li>
-            <li><strong>For emergencies, call emergency services immediately (911, 999, 112)</strong></li>
-            <li><strong>Always consult qualified healthcare professionals for medical concerns</strong></li>
-            <li><strong>Never delay seeking medical care based on information from this chatbot</strong></li>
-        </ul>
-    </div>
-    """
-    
-    # Create interface (Gradio 6.0 compatible)
-    with gr.Blocks() as demo:
-        gr.HTML(header)
-        
-        # ChatInterface (simplified for Gradio 6.0)
-        chatbot = gr.ChatInterface(
-            fn=app.respond,
-            chatbot=gr.Chatbot(height=600),
-            textbox=gr.Textbox(
-                placeholder="Ask me about your health concerns...",
-                container=False,
-                scale=7
-            ),
-            title=None,  # Using custom header above
-            description=None,
-            examples=[
-                "What are the symptoms of a common cold?",
-                "How can I improve my sleep quality?",
-                "What should I do for a headache?",
-                "How much water should I drink daily?",
-                "What are the benefits of regular exercise?",
-                "How do I know if I'm dehydrated?",
-            ]
-        )
-        
-        # Footer
-        footer_text = f"""
-        <div style='text-align: center; padding: 20px; margin-top: 30px; border-top: 2px solid #e0e0e0;'>
-            <p style='color: #666; font-size: 0.9em;'>
-                Powered by LangChain + Groq | 
-                <strong>For Educational Purposes Only</strong> | 
-                This chatbot uses {"RAG with medical knowledge base" if app.has_rag else "AI language model"}
-            </p>
-            <p style='color: #999; font-size: 0.8em; margin-top: 10px;'>
-                Remember: Always consult healthcare professionals for personalized medical advice
-            </p>
-        </div>
-        """
-        gr.HTML(footer_text)
-    
-    return demo, css
+# Define response function
+def respond(message, history):
+    """Generate response"""
+    try:
+        if bot:
+            return bot.chat(message)
+        return "Chatbot not initialized"
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return f"Error: {str(e)}"
 
-
-if __name__ == "__main__":
-    print("\n" + "="*60)
-    print("🏥 Starting Dr. AI Medical Chatbot")
-    print("="*60 + "\n")
+# Create interface
+logger.info("Creating Gradio interface...")
+with gr.Blocks() as demo:
+    gr.Markdown("# 🏥 Dr. AI Medical Chatbot")
+    gr.Markdown("Ask me about your health concerns...")
     
-    demo, css = create_interface()
-    
-    # Get PORT from Railway environment, default to 7860 for local development
-    port = int(os.environ.get('PORT', 7860))
-    
-    print(f"🚀 Launching on port: {port}")
-    
-    demo.launch(
-        server_name="0.0.0.0",  # Allow external access
-        server_port=port,  # Use dynamic port from Railway
-        share=False,  # Set to True to get public URL
-        show_error=True
+    chatbot = gr.ChatInterface(
+        fn=respond,
+        chatbot=gr.Chatbot(height=400),
+        textbox=gr.Textbox(
+            placeholder="Ask about health...",
+            container=False,
+            scale=7
+        ),
+        title=None,
+        description=None,
     )
+
+logger.info("✅ Interface created")
+logger.info("="*60)
+logger.info(f"🚀 Launching on 0.0.0.0:{port}")
+logger.info("="*60)
+
+# Launch
+demo.launch(
+    server_name="0.0.0.0",
+    server_port=port,
+    share=False,
+    show_error=True
+)
