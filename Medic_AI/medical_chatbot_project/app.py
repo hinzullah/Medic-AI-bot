@@ -1,6 +1,6 @@
 """
 Main Gradio Web App - Production-ready medical chatbot
-FIXED for Gradio 6.0
+FIXED for Gradio 6.0 and Railway Deployment
 """
 
 import gradio as gr
@@ -8,6 +8,10 @@ from src.rag_chatbot import RAGMedicalChatbot
 from src.safety_layer import SafeChatbotWrapper
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
 class MedicalChatbotApp:
@@ -137,9 +141,14 @@ if __name__ == "__main__":
     
     demo, css = create_interface()
     
+    # Get PORT from Railway environment, default to 7860 for local development
+    port = int(os.environ.get('PORT', 7860))
+    
+    print(f"🚀 Launching on port: {port}")
+    
     demo.launch(
         server_name="0.0.0.0",  # Allow external access
-        server_port=7860,
+        server_port=port,  # Use dynamic port from Railway
         share=False,  # Set to True to get public URL
         show_error=True
     )
