@@ -2,9 +2,9 @@
 Medical Chatbot App - Clean Version
 """
 
-import sys
 import os
 import logging
+import threading
 from dotenv import load_dotenv
 import gradio as gr
 from src.safety_layer import SafeChatbotWrapper
@@ -31,33 +31,55 @@ logger.info(f"PORT: {port}")
 groq_key = os.environ.get('GROQ_API_KEY')
 logger.info(f"GROQ_API_KEY found: {bool(groq_key)}")
 
-# Load chatbot
-logger.info("Loading chatbot...")
 bot = None
+bot_lock = threading.Lock()
+bot_error = None
 
-try:
-    from src.rag_chatbot import RAGMedicalChatbot
-    logger.info("Initializing RAG Chatbot...")
-    base_bot = RAGMedicalChatbot(knowledge_db_path=KNOWLEDGE_DB_PATH)
-    bot = SafeChatbotWrapper(base_bot)
-    logger.info("✅ RAG Chatbot loaded")
-except Exception as e:
-    logger.error(f"RAG Chatbot failed: {e}")
-    try:
-        from src.simple_chatbot import SimpleMedicalChatbot
-        base_bot = SimpleMedicalChatbot()
-        bot = SafeChatbotWrapper(base_bot)
-        logger.info("✅ Simple Chatbot loaded")
-    except Exception as e2:
-        logger.error(f"Simple Chatbot failed: {e2}")
+
+def get_bot():
+    """Load the chatbot on first use so Railway can bind to PORT quickly."""
+    global bot, bot_error
+
+    if bot:
+        return bot
+
+    with bot_lock:
+        if bot:
+            return bot
+
+        logger.info("Loading chatbot...")
+        try:
+            from src.rag_chatbot import RAGMedicalChatbot
+            logger.info("Initializing RAG Chatbot...")
+            base_bot = RAGMedicalChatbot(knowledge_db_path=KNOWLEDGE_DB_PATH)
+            bot = SafeChatbotWrapper(base_bot)
+            bot_error = None
+            logger.info("✅ RAG Chatbot loaded")
+            return bot
+        except Exception as e:
+            logger.error(f"RAG Chatbot failed: {e}")
+
+        try:
+            from src.simple_chatbot import SimpleMedicalChatbot
+            logger.info("Initializing Simple Chatbot...")
+            base_bot = SimpleMedicalChatbot()
+            bot = SafeChatbotWrapper(base_bot)
+            bot_error = None
+            logger.info("✅ Simple Chatbot loaded")
+            return bot
+        except Exception as e2:
+            bot_error = str(e2)
+            logger.error(f"Simple Chatbot failed: {e2}")
+            return None
 
 # Define response function
 def respond(message, history):
     """Generate response"""
     try:
-        if bot:
-            return bot.chat(message)
-        return "Chatbot not initialized"
+        chatbot = get_bot()
+        if chatbot:
+            return chatbot.chat(message)
+        return f"Chatbot not initialized. Check Railway variables and logs. Last error: {bot_error}"
     except Exception as e:
         logger.error(f"Error: {e}")
         return f"Error: {str(e)}"
