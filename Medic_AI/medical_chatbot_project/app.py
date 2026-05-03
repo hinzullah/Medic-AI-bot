@@ -85,15 +85,6 @@ def respond(message, history):
         return f"Error: {str(e)}"
 
 
-EXAMPLES = [
-    "What are the symptoms of a common cold?",
-    "How can I improve my sleep quality?",
-    "What should I do for a headache?",
-    "How much water should I drink daily?",
-    "What are the benefits of regular exercise?",
-    "How do I know if I'm dehydrated?",
-]
-
 CSS = """
 :root {
     --brand: #0f8f7f;
@@ -171,6 +162,24 @@ CSS = """
     color: #3d2a0d;
 }
 
+#prompt-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 18px;
+}
+
+.prompt-card {
+    border: 1px solid rgba(15, 143, 127, 0.16);
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 8px;
+    color: var(--brand-dark);
+    font-size: 0.92rem;
+    font-weight: 650;
+    line-height: 1.35;
+    padding: 12px 14px;
+}
+
 #chat-panel {
     border: 1px solid rgba(23, 33, 43, 0.08);
     border-radius: 8px;
@@ -216,6 +225,12 @@ button.primary:hover {
 footer {
     display: none !important;
 }
+
+@media (max-width: 760px) {
+    #prompt-grid {
+        grid-template-columns: 1fr;
+    }
+}
 """
 
 # Create interface
@@ -249,6 +264,14 @@ with gr.Blocks(title="Dr. AI Medical Assistant") as demo:
             <div id="safety-note">
                 <strong>Important:</strong> This app provides general health information only. It is not a doctor, diagnosis, or treatment plan. For urgent symptoms or emergencies, contact local emergency services immediately.
             </div>
+            <div id="prompt-grid">
+                <div class="prompt-card">What are the symptoms of a common cold?</div>
+                <div class="prompt-card">How can I improve my sleep quality?</div>
+                <div class="prompt-card">What should I do for a headache?</div>
+                <div class="prompt-card">How much water should I drink daily?</div>
+                <div class="prompt-card">What are the benefits of regular exercise?</div>
+                <div class="prompt-card">How do I know if I'm dehydrated?</div>
+            </div>
             """
         )
 
@@ -267,8 +290,6 @@ with gr.Blocks(title="Dr. AI Medical Assistant") as demo:
                     container=False,
                     scale=7
                 ),
-                examples=EXAMPLES,
-                cache_examples=False,
                 title=None,
                 description=None,
             )
