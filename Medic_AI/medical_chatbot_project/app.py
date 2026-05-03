@@ -84,23 +84,202 @@ def respond(message, history):
         logger.error(f"Error: {e}")
         return f"Error: {str(e)}"
 
+
+EXAMPLES = [
+    "What are the symptoms of a common cold?",
+    "How can I improve my sleep quality?",
+    "What should I do for a headache?",
+    "How much water should I drink daily?",
+    "What are the benefits of regular exercise?",
+    "How do I know if I'm dehydrated?",
+]
+
+CSS = """
+:root {
+    --brand: #0f8f7f;
+    --brand-dark: #0b615b;
+    --ink: #17212b;
+    --muted: #5f6f7a;
+    --surface: #ffffff;
+    --soft: #eef8f6;
+    --warning: #fff4df;
+    --warning-border: #f1c36d;
+}
+
+.gradio-container {
+    background:
+        radial-gradient(circle at 15% 0%, rgba(15, 143, 127, 0.12), transparent 30%),
+        linear-gradient(180deg, #f7fbfa 0%, #edf5f3 100%);
+    color: var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#app-shell {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 28px 18px 18px;
+}
+
+#hero {
+    padding: 24px 0 18px;
+}
+
+#hero h1 {
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: 0;
+}
+
+#hero p {
+    margin: 12px 0 0;
+    max-width: 680px;
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.55;
+}
+
+#status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.status-pill {
+    border: 1px solid rgba(15, 143, 127, 0.18);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--brand-dark);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+#safety-note {
+    border: 1px solid var(--warning-border);
+    background: var(--warning);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 8px 0 18px;
+    color: #5c4217;
+    line-height: 1.45;
+}
+
+#safety-note strong {
+    color: #3d2a0d;
+}
+
+#chat-panel {
+    border: 1px solid rgba(23, 33, 43, 0.08);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 18px 40px rgba(18, 45, 43, 0.10);
+    overflow: hidden;
+}
+
+#chat-panel .wrap,
+#chat-panel .contain {
+    border-radius: 0;
+}
+
+#chatbot {
+    min-height: 480px;
+}
+
+#chatbot .message {
+    border-radius: 8px;
+}
+
+textarea {
+    border-radius: 8px !important;
+}
+
+button.primary {
+    background: var(--brand) !important;
+    border-color: var(--brand) !important;
+}
+
+button.primary:hover {
+    background: var(--brand-dark) !important;
+    border-color: var(--brand-dark) !important;
+}
+
+#footer {
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+footer {
+    display: none !important;
+}
+"""
+
 # Create interface
 logger.info("Creating Gradio interface...")
-with gr.Blocks() as demo:
-    gr.Markdown("# 🏥 Dr. AI Medical Chatbot")
-    gr.Markdown("Ask me about your health concerns...")
-    
-    chatbot = gr.ChatInterface(
-        fn=respond,
-        chatbot=gr.Chatbot(height=400),
-        textbox=gr.Textbox(
-            placeholder="Ask about health...",
-            container=False,
-            scale=7
-        ),
-        title=None,
-        description=None,
-    )
+theme = gr.themes.Soft(
+    primary_hue="teal",
+    secondary_hue="cyan",
+    neutral_hue="slate",
+    radius_size="sm",
+    text_size="md",
+).set(
+    body_background_fill="#f7fbfa",
+    block_background_fill="#ffffff",
+    button_primary_background_fill="#0f8f7f",
+    button_primary_background_fill_hover="#0b615b",
+)
+
+with gr.Blocks(title="Dr. AI Medical Assistant") as demo:
+    with gr.Column(elem_id="app-shell"):
+        gr.HTML(
+            """
+            <section id="hero">
+                <h1>Dr. AI</h1>
+                <p>Your focused medical information assistant for everyday health questions, symptom education, and safer next steps.</p>
+                <div id="status-row">
+                    <span class="status-pill">RAG knowledge base</span>
+                    <span class="status-pill">Groq powered responses</span>
+                    <span class="status-pill">Emergency-aware safety layer</span>
+                </div>
+            </section>
+            <div id="safety-note">
+                <strong>Important:</strong> This app provides general health information only. It is not a doctor, diagnosis, or treatment plan. For urgent symptoms or emergencies, contact local emergency services immediately.
+            </div>
+            """
+        )
+
+        with gr.Column(elem_id="chat-panel"):
+            chatbot = gr.ChatInterface(
+                fn=respond,
+                chatbot=gr.Chatbot(
+                    label="Conversation",
+                    height=520,
+                    elem_id="chatbot",
+                    avatar_images=(None, None),
+                ),
+                textbox=gr.Textbox(
+                    placeholder="Ask about symptoms, wellness, sleep, hydration, headaches...",
+                    label="Your question",
+                    container=False,
+                    scale=7
+                ),
+                examples=EXAMPLES,
+                cache_examples=False,
+                title=None,
+                description=None,
+            )
+
+        gr.HTML(
+            """
+            <div id="footer">
+                Educational use only. Always consult a qualified healthcare professional for personal medical concerns.
+            </div>
+            """
+        )
 
 logger.info("✅ Interface created")
 logger.info("="*60)
@@ -112,5 +291,7 @@ demo.launch(
     server_name="0.0.0.0",
     server_port=port,
     share=False,
-    show_error=True
+    show_error=True,
+    theme=theme,
+    css=CSS
 )
