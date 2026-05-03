@@ -37,6 +37,10 @@ wheels/
 *.swo
 *~
 
+# Codex workspace metadata
+.codex/
+.agents/
+
 # OS
 .DS_Store
 Thumbs.db

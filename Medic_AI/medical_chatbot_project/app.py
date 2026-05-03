@@ -7,6 +7,10 @@ import os
 import logging
 from dotenv import load_dotenv
 import gradio as gr
+from src.safety_layer import SafeChatbotWrapper
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+KNOWLEDGE_DB_PATH = os.path.join(BASE_DIR, "medical_knowledge_db")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -33,9 +37,8 @@ bot = None
 
 try:
     from src.rag_chatbot import RAGMedicalChatbot
-    from src.safety_layer import SafeChatbotWrapper
     logger.info("Initializing RAG Chatbot...")
-    base_bot = RAGMedicalChatbot()
+    base_bot = RAGMedicalChatbot(knowledge_db_path=KNOWLEDGE_DB_PATH)
     bot = SafeChatbotWrapper(base_bot)
     logger.info("✅ RAG Chatbot loaded")
 except Exception as e:
