@@ -1,1 +1,1 @@
-web: cd medical_chatbot_project && python app.py
+web: pip install -r medical_chatbot_project/requirements.txt && cd medical_chatbot_project && python app.py
